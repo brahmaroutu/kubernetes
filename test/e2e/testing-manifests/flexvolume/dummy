@@ -45,11 +45,25 @@ unmount() {
 	exit 0
 }
 
+expandvolume() {
+        debug "expandvolume $@"
+        log "{\"SRINIB   **************************\":\"ExpandVolume Called into the driver HOOORAAAAAAAAYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY\"}"
+        log "{\"status\":\"Success\",\" ExpandVolume\"}"
+        exit 0
+}
+
+expandfs() {
+        debug "expandfs $@"
+        log "{\"SRINIB   **************************\":\"ExpandFS Called into the driver HOOORAAAAAAAAYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYYY\"}"
+        log "{\"status\":\"Success\",\" ExpandFS\"}"
+        exit 0
+}
+
 op=$1
 
 if [ "$op" = "init" ]; then
 	debug "init $@"
-	log "{\"status\":\"Success\",\"capabilities\":{\"attach\":false}}"
+	log "{\"status\":\"Success\",\"capabilities\":{\"attach\":false,\"requiresFSResize\":true}}"
 	exit 0
 fi
 
@@ -61,6 +75,12 @@ case "$op" in
 		;;
 	unmount)
 		unmount $*
+		;;
+	expandfs)
+		expandfs $*
+		;;
+	expandvolume)
+		expandvolume $*
 		;;
 	*)
 		log "{\"status\":\"Not supported\"}"

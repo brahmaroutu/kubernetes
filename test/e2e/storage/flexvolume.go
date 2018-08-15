@@ -25,8 +25,10 @@ import (
 	"time"
 
 	. "github.com/onsi/ginkgo"
+	. "github.com/onsi/gomega"
 	"k8s.io/api/core/v1"
 	apierrs "k8s.io/apimachinery/pkg/api/errors"
+	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/apimachinery/pkg/version"
 	clientset "k8s.io/client-go/kubernetes"
@@ -34,6 +36,8 @@ import (
 	"k8s.io/kubernetes/test/e2e/framework"
 	"k8s.io/kubernetes/test/e2e/generated"
 	"k8s.io/kubernetes/test/e2e/storage/utils"
+	"k8s.io/apimachinery/pkg/api/resource"
+
 )
 
 const (
@@ -64,6 +68,8 @@ func testFlexVolume(driver string, cs clientset.Interface, config framework.Volu
 			ExpectedContent: "Hello from flexvolume!",
 		},
 	}
+framework.Logf("SRINIB **************** testPod")
+time.Sleep(10000 * time.Millisecond)
 	framework.TestVolumeClient(cs, config, nil, tests)
 
 	framework.VolumeTestCleanup(f, config)
@@ -129,7 +135,7 @@ func uninstallFlex(c clientset.Interface, node *v1.Node, vendor, driver string) 
 func getFlexDir(c clientset.Interface, node *v1.Node, vendor, driver string) string {
 	volumePluginDir := defaultVolumePluginDir
 	if framework.ProviderIs("gce") {
-		if node == nil && framework.MasterOSDistroIs("gci") {
+		if node == nil && framework.MasterOSDistroIs("gci", "ubuntu") {
 			v, err := getMasterVersion(c)
 			if err != nil {
 				framework.Failf("Error getting master version: %v", err)
@@ -140,7 +146,7 @@ func getFlexDir(c clientset.Interface, node *v1.Node, vendor, driver string) str
 			} else {
 				volumePluginDir = gciVolumePluginDirLegacy
 			}
-		} else if node != nil && framework.NodeOSDistroIs("gci") {
+		} else if node != nil && framework.NodeOSDistroIs("gci", "ubuntu") {
 			if getNodeVersion(node).AtLeast(versionutil.MustParseGeneric(gciVolumePluginDirVersion)) {
 				volumePluginDir = gciVolumePluginDir
 			} else {
@@ -200,6 +206,9 @@ var _ = utils.SIGDescribe("Flexvolumes", func() {
 	var node v1.Node
 	var config framework.VolumeTestConfig
 	var suffix string
+        var err    error
+	var pvc    *v1.PersistentVolumeClaim
+	var pv     *v1.PersistentVolume
 
 	BeforeEach(func() {
 		framework.SkipUnlessProviderIs("gce", "local")
@@ -219,6 +228,10 @@ var _ = utils.SIGDescribe("Flexvolumes", func() {
 		suffix = ns.Name
 	})
 
+	AfterEach(func() {
+	})
+
+
 	It("should be mountable when non-attachable", func() {
 		driver := "dummy"
 		driverInstallAs := driver + "-" + suffix
@@ -226,7 +239,66 @@ var _ = utils.SIGDescribe("Flexvolumes", func() {
 		By(fmt.Sprintf("installing flexvolume %s on node %s as %s", path.Join(driverDir, driver), node.Name, driverInstallAs))
 		installFlex(cs, &node, "k8s", driverInstallAs, path.Join(driverDir, driver))
 
+			pv = &v1.PersistentVolume{
+				ObjectMeta: metav1.ObjectMeta{
+					Name: "my-flex-volume",
+				        Annotations: map[string]string {
+    						"volume.beta.kubernetes.io/storage-class": "",
+					},
+				},
+				Spec: v1.PersistentVolumeSpec{
+					AccessModes: []v1.PersistentVolumeAccessMode{
+						v1.ReadWriteOnce,
+					},
+					Capacity: v1.ResourceList{
+						v1.ResourceName(v1.ResourceStorage): resource.MustParse("3Gi"),
+					},
+				       PersistentVolumeSource: v1.PersistentVolumeSource { 
+					    	FlexVolume: &v1.FlexPersistentVolumeSource {
+					    Driver: "kubernetes.io/flex-volume", 
+   					    FSType: "ext4",
+    					    ReadOnly: true,
+  						},
+					},
+				},
+			}
+			pv, err = cs.CoreV1().PersistentVolumes().Create(pv)
+			framework.ExpectNoError(err)
+
+	pvc = &v1.PersistentVolumeClaim{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "my-claim",
+			Namespace:    ns.Name,
+			Annotations: map[string]string {
+				"volume.beta.kubernetes.io/storage-class": "",
+			},
+		},
+		Spec: v1.PersistentVolumeClaimSpec{
+			AccessModes: []v1.PersistentVolumeAccessMode{
+				v1.ReadWriteOnce,
+			},
+			Resources: v1.ResourceRequirements{
+				Requests: v1.ResourceList{
+				     "storage": resource.MustParse("2Gi"),
+				},
+			},
+			VolumeName: "my-flex-volume",
+		},
+	}
+
+		//pvc = newClaim(test, ns.Name, "default")
+		pvc, err = cs.CoreV1().PersistentVolumeClaims(pvc.Namespace).Create(pvc)
+		Expect(err).NotTo(HaveOccurred(), "Error creating pvc")
+
+		pvcClaims := []*v1.PersistentVolumeClaim{pvc}
+		pvs, err := framework.WaitForPVClaimBoundPhase(cs, pvcClaims, framework.ClaimProvisionShortTimeout)
+		Expect(err).NotTo(HaveOccurred(), "Failed waiting for PVC to be bound %v", err)
+		Expect(len(pvs)).To(Equal(1))
+
+framework.Logf("SRINIB **************** testFlexVolume")
+time.Sleep(10000 * time.Millisecond)
 		testFlexVolume(driverInstallAs, cs, config, f)
+time.Sleep(100000 * time.Millisecond)
 
 		By("waiting for flex client pod to terminate")
 		if err := f.WaitForPodTerminated(config.Prefix+"-client", ""); !apierrs.IsNotFound(err) {
@@ -235,6 +307,16 @@ var _ = utils.SIGDescribe("Flexvolumes", func() {
 
 		By(fmt.Sprintf("uninstalling flexvolume %s from node %s", driverInstallAs, node.Name))
 		uninstallFlex(cs, &node, "k8s", driverInstallAs)
+
+		By("Expanding current pvc")
+		newSize := resource.MustParse("3Gi")
+		pvc, err = expandPVCSize(pvc, newSize, cs)
+		Expect(err).NotTo(HaveOccurred(), "While updating pvc for more size")
+		Expect(pvc).NotTo(BeNil())
+
+
+framework.ExpectNoError(framework.DeletePersistentVolume(cs, pv.Name))
+framework.ExpectNoError(framework.DeletePersistentVolumeClaim(cs, pvc.Name, pvc.Namespace))
 	})
 
 	It("should be mountable when attachable", func() {

@@ -132,12 +132,17 @@ func (pvcr *persistentVolumeClaimResize) Validate(a admission.Attributes) error 
 // Growing Persistent volumes is only allowed for PVCs for which their StorageClass
 // explicitly allows it.
 func (pvcr *persistentVolumeClaimResize) allowResize(pvc, oldPvc *api.PersistentVolumeClaim) bool {
+	return true
 	pvcStorageClass := apihelper.GetPersistentVolumeClaimClass(pvc)
 	oldPvcStorageClass := apihelper.GetPersistentVolumeClaimClass(oldPvc)
+        fmt.Println("SRINIB ******************************* pvcStorageClass= ",pvcStorageClass)
+        fmt.Println("SRINIB ******************************* oldPvcStorageClass= ",oldPvcStorageClass)
+
 	if pvcStorageClass == "" || oldPvcStorageClass == "" || pvcStorageClass != oldPvcStorageClass {
 		return false
 	}
 	sc, err := pvcr.scLister.Get(pvcStorageClass)
+        fmt.Println("scsc.AllowVolumeExpansion ", sc.AllowVolumeExpansion, "  err ", err)
 	if err != nil {
 		return false
 	}
