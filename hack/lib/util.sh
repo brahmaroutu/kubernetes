@@ -213,6 +213,7 @@ kube::util::gen-docs() {
   genman=$(kube::util::find-binary "genman")
   genyaml=$(kube::util::find-binary "genyaml")
   genfeddocs=$(kube::util::find-binary "genfeddocs")
+  genconfdoc=$(kube::util::find-binary "conformance")
 
   # TODO: If ${genfeddocs} is not used from anywhere (it isn't used at
   # least from k/k tree), remove it completely.
@@ -241,6 +242,13 @@ kube::util::gen-docs() {
 
   mkdir -p "${dest}/docs/yaml/kubectl/"
   "${genyaml}" "${dest}/docs/yaml/kubectl/"
+
+kube::version::get_version_vars
+  echo "SRINI RUN CONFORMANCE CODE ${KUBE_GIT_MAJOR}.${KUBE_GIT_MINOR}"
+  KUBEVER=${KUBE_GIT_MAJOR}.${KUBE_GIT_MINOR}
+  mkdir -p "${dest}/docs/conformance/"
+  echo "${genconfdoc} --conformance test --version ${KUBEVER}  > ${dest}/docs/conformance/conformance.md"
+  "${genconfdoc}" --conformance "test" --version $KUBEVER} > ${dest}/docs/conformance/conformance.md
 
   # create the list of generated files
   pushd "${dest}" > /dev/null || return 1

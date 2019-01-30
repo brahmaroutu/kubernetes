@@ -161,6 +161,7 @@ filegroup(
             "//cmd/genman",
             "//cmd/genswaggertypedocs",
             "//cmd/genyaml",
+            "//test/conformance",
             "//cmd/linkcheck",
             "//test/e2e:e2e.test_binary",
             "//vendor/github.com/onsi/ginkgo/ginkgo",

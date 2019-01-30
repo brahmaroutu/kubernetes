@@ -110,6 +110,7 @@ kube::golang::conformance_image_targets() {
     vendor/github.com/onsi/ginkgo/ginkgo
     test/e2e/e2e.test
     cluster/images/conformance/go-runner
+    test/conformance
     cmd/kubectl
   )
   echo "${targets[@]}"
@@ -266,6 +267,7 @@ kube::golang::test_targets() {
     vendor/github.com/onsi/ginkgo/ginkgo
     test/e2e/e2e.test
     cluster/images/conformance/go-runner
+    test/conformance
   )
   echo "${targets[@]}"
 }
