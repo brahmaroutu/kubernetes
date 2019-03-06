@@ -207,7 +207,13 @@ var _ = Describe("[sig-storage] EmptyDir volumes", func() {
 		doTest0777(f, testImageNonRootUid, v1.StorageMediumDefault)
 	})
 
-	It("pod should support shared volumes between containers", func() {
+	/*
+		Release : v1.14
+		Testname: VolumeSharing, share volume between containers
+		Description: A Pod created with a volume and two containers. Both the containers mount the pod such that when a
+		one of the container writes to the volume the other container MUST be able to read the content.
+	*/
+	It("pod should support shared volumes between containers [Storage_Validation]", func() {
 		var (
 			volumeName                 = "shared-data"
 			busyBoxMainVolumeMountPath = "/usr/share/volumeshare"
