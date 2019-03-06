@@ -41,7 +41,14 @@ var _ = utils.SIGDescribe("Volumes", func() {
 	})
 
 	Describe("ConfigMap", func() {
-		It("should be mountable", func() {
+		/*
+			     		Release : v1.14
+					Testname: ConfigMap, Config map should be mountable
+		               		Description: A ConfigMap VolumeSource is create and multiple volumes are mounted from the source. The file contents
+		                        from the volume MUST verify correctly.
+		*/
+
+		It("should be mountable [StorageValidation]", func() {
 			config := framework.VolumeTestConfig{
 				Namespace: namespace.Name,
 				Prefix:    "configmap",
